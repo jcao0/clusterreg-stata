@@ -1,5 +1,5 @@
-// imivreg.ado
-program define imivreg, eclass
+// imivreg_test.ado
+program define imivreg_test, eclass
     version 17
     syntax varlist(numeric min=1) [if] [in] [aw fw iw pw], ///
         CLuster(varlist numeric) [TIMEperiod(varname numeric)] ///
@@ -184,7 +184,7 @@ program define imivreg, eclass
         U_transformed = invsym(CSHat_U) * U_hat // L^-1 * U
         V_transformed = invsym(CSHat_V) * V_hat // L^-1 * V
         rhoHat = correlation(U_transformed, V_transformed)
-		display("AAA")
+		
         if (missing(rhoHat)) rhoHat = 0 // Handle potential issues if correlation is undefined
 
         // Construct Sigma_sim_block for (U,V)
@@ -203,7 +203,7 @@ program define imivreg, eclass
         }
 
         sigLevel = .05
-        Bboot = 1000 // Reduce for speed, paper uses 10000 for example, 1000 for sim
+        Bboot = 1000 // Reduce for speed
         CSHat_sim_block = cholesky(Sigma_sim_block)
         UVbootMat = CSHat_sim_block' * rnormal(2*n, Bboot, 0, 1)
         
@@ -268,7 +268,7 @@ program define imivreg, eclass
                 }
                 
                 // Power calculation
-                alternatives = (-10::1)' * (1::10)/sqrt(n)
+                alternatives = range(-10, 1, 1)' / sqrt(n)
                 nalt = rows(alternatives)
                 power_sum_for_G = 0
                 if (G > 1) {
@@ -284,6 +284,7 @@ program define imivreg, eclass
                 } else {
                     simPowerVec[kk] = 0 // No power for G=1
                 }
+				
             } // end kk loop (G_vec)
 
             indStar = windStar = .
@@ -350,13 +351,14 @@ program define imivreg, eclass
     mata: st_local("R2_val", strofreal(R2_final))
     mata: st_local("RootMSE_val", strofreal(RootMSE_final))
 
+	
     local obs_text "Number of obs  = "
     local obs_num = string(n_obs, "%9.0g")
     local r2_text  "R^2 (2SLS)     = "
     local r2_num = string(`R2_val', "%9.4f")
     local rmse_text "Root MSE (2SLS)= "
     local rmse_num = string(`RootMSE_val', "%9.4f")
-
+	
     di _n as text "Ibragimov and Muller (IV) with learned cluster"
     di _col(65) as text "`obs_text'" _col(5) as result "`obs_num'"
     di _col(65) as text "`r2_text'" _col(5) as result "`r2_num'"
@@ -367,8 +369,9 @@ program define imivreg, eclass
     di as text "{hline 85}"
 
     // Loop to display results for each structural parameter
-    local list_of_struc_param_names : list rnames
-    forvalues i = 1/`=p_s' { // p_s is number of structural parameters
+    local list_of_struc_param_names : rownames resultsMat
+	local p_s : word count `list_of_struc_param_names'
+    forvalues i = 1/`p_s' {
         local name : word `i' of `list_of_struc_param_names'
         local coef = resultsMat[`i',1]
         local se   = resultsMat[`i',2]
@@ -392,54 +395,230 @@ end
 
 
 mata:
-// New FamaMacbethIV function
-// Inputs: Y_s (outcome), X_s_all (structural regressors), Z_s_all (instruments for structural), 
-//         clustering_labels, b_coeffs_clusterwise (output matrix G x p_s)
 void FamaMacbethIV(Y_s_arg, X_s_all_arg, Z_s_all_arg, clustering_labels, b_coeffs_clusterwise_out) {
-    real scalar G_fm, p_s_fm, n_fm
+    real scalar G_fm, p_s_fm // n_fm is defined but not used
     G_fm = max(clustering_labels)
-    p_s_fm = cols(X_s_all_arg)
-    n_fm = rows(Y_s_arg)
-    
-    // Ensure output matrix has correct dimensions if passed pre-sized
-    if (rows(b_coeffs_clusterwise_out) != G_fm | cols(b_coeffs_clusterwise_out) != p_s_fm) {
-        b_coeffs_clusterwise_out = J(G_fm, p_s_fm, .)
+    // Robust handling of G_fm if no valid clusters
+    if (missing(G_fm) || G_fm < 1) {
+        G_fm = 0 // No loops will run if G_fm is 0
     }
+    p_s_fm = cols(X_s_all_arg)
+    
+    b_coeffs_clusterwise_out = J(G_fm, p_s_fm, .) // Initialize with missings
 
     for (ii=1; ii<=G_fm; ii++ ){
         fii = selectindex(clustering_labels :== ii)
-        if (rows(fii) == 0) continue // Skip if cluster is empty
+        if (rows(fii) == 0) { 
+            // b_coeffs_clusterwise_out[ii,.] is already missing
+            continue
+        }
 
         Y_c = Y_s_arg[fii,.]
         X_s_c = X_s_all_arg[fii,.]
         Z_s_c = Z_s_all_arg[fii,.]
         
-        // Check for sufficient observations and rank
-        if (rows(Y_c) < cols(X_s_c)) { // Not enough obs
-            b_coeffs_clusterwise_out[ii,.] = J(1, p_s_fm, .) // missing
+        if (rows(Y_c) < cols(X_s_c) || rows(Z_s_c) < cols(Z_s_c) || rows(Y_c) < cols(Z_s_c) /*added this last one too*/) { 
+            // b_coeffs_clusterwise_out[ii,.] is already missing
+            continue
+        }
+        // Ensure Z_s_c is not empty if it's expected to have columns (e.g. for constant)
+        if (cols(Z_s_c) == 0) { // If no instruments defined for the cluster (e.g. all Z_i and X_k are empty after selection)
+             // b_coeffs_clusterwise_out[ii,.] is already missing
             continue
         }
         
-        // Use error handling with invsym()
-        ZZ_inv = invsym(Z_s_c'*Z_s_c)
-        if (ZZ_inv[1,1] == .) { // Check if inversion failed
-            b_coeffs_clusterwise_out[ii,.] = J(1, p_s_fm, .)
+        real matrix ZZ, ZZ_inv, XZ, ZX, ZY, middle_term, XZ_ZZinv, Xprime_PZ_X, beta_c
+
+        ZZ = Z_s_c'*Z_s_c
+        // Check if ZZ is square and not empty before invsym
+        if (rows(ZZ) == 0 || !issquare(ZZ)) {
+             // b_coeffs_clusterwise_out[ii,.] is already missing
+            continue
+        }
+        ZZ_inv = invsym(ZZ)
+        if (isscalar(ZZ_inv) && ZZ_inv[1,1] == .) { 
+            // b_coeffs_clusterwise_out[ii,.] is already missing
             continue
         }
         
         XZ = X_s_c'*Z_s_c
-        ZX = Z_s_c'*X_s_c
+        ZX = Z_s_c'*X_s_c // This is XZ'
         ZY = Z_s_c'*Y_c
         
-        // Compute the IV matrix components
-        middle = invsym(XZ * ZZ_inv * ZX)
-        if (middle[1,1] == .) { // Check if inversion failed
-            b_coeffs_clusterwise_out[ii,.] = J(1, p_s_fm, .)
+        XZ_ZZinv = XZ * ZZ_inv
+        Xprime_PZ_X = XZ_ZZinv * ZX 
+
+        // Check if Xprime_PZ_X is square and not empty
+        if (rows(Xprime_PZ_X) == 0 || !issquare(Xprime_PZ_X)) {
+            // b_coeffs_clusterwise_out[ii,.] is already missing
+            continue
+        }
+        middle_term = invsym(Xprime_PZ_X) // Renamed from 'middle' for clarity
+        if (isscalar(middle_term) && middle_term[1,1] == .) { 
+            // b_coeffs_clusterwise_out[ii,.] is already missing
             continue
         }
         
-        beta_c = middle * (XZ * ZZ_inv * ZY)
+        beta_c = middle_term * (XZ_ZZinv * ZY)
+        
+        if (isscalar(beta_c) && missing(beta_c)) { // Final check on result
+            // b_coeffs_clusterwise_out[ii,.] is already missing
+            continue;
+        }
         b_coeffs_clusterwise_out[ii,.] = beta_c'
     }
+}
+function logdet(A){
+		Ldecomposition=Udecomposition =pdecomposition=.
+		lud(A,Ldecomposition,Udecomposition,pdecomposition)
+		Pdecomposition = I(rows(Ldecomposition))[pdecomposition,.]
+		du = diagonal(Udecomposition)
+		prod = 1
+		for (i=1;i<=rows(du);i++){
+			prod =prod * sign(du[i])
+		}
+		c = det(Pdecomposition) * prod
+		v = log(c) + sum(log(abs(du)))
+		return(v)
+	}
+
+void QMLE_new(todo, w, M, useQML, dis_mat, time_mat, resid, Q, grad, hessian) {
+    Sigma_func = exp(w[1]) :* exp(-dis_mat/exp(w[2])) :* exp(-time_mat/exp(w[3]))
+    if (rows(M) > 0) {
+        Sigma_func = M[useQML,.] * Sigma_func * (M[useQML,.])'
+    }
+    R = cholesky(Sigma_func)
+    invSigma_resid = lusolve(R, lusolve(R', resid[useQML,1]))
+    Q = 0.5*logdet(Sigma_func) + 0.5*quadcolsum(resid[useQML,1] :* invSigma_resid)
+}
+
+function Sigma_func_DGP(w,dis_mat,time_mat){
+		SigmaHat = exp(w[1])*exp(-dis_mat/exp(w[2])-time_mat/exp(w[3]))
+		return(SigmaHat)
+	}
+
+void FamaMacbeth(D,X,Y,Z,index,b,se){
+		X_mat = D,X
+		Z_mat = Z,X
+		k = cols(X_mat)
+		G = rows(uniqrows(index))
+		btemp = J(G,k,0)
+		for (ii=1; ii<=G; ii++ ){
+			fii = index:== ii 
+			temp = select(Z_mat,fii)'* select(X_mat,fii)
+			ktemp= select(Z_mat,fii)'*select(Y,fii)
+			btemp[ii,.] = (invsym(temp)*ktemp)'
+		}
+		b = mean(btemp)
+		se = (diagonal(sqrt(variance(btemp)))/sqrt(G))'
+
+	}
+
+
+void QMLE_bin(todo, w, M, useQML, dis_mat, resid, Q, grad, H)
+{
+    real scalar s2, rho, eps, pen, g1, g2
+    s2  = exp(w[1])
+    rho = exp(w[2])
+    real matrix Kfull, Sigma_full
+    Kfull      = exp(-dis_mat / rho)
+    Sigma_full = s2 :* Kfull
+    real scalar haveM
+    haveM = (rows(M) > 0)
+    real matrix Sigma, Msub
+    real colvector rsub
+    rsub = resid[useQML, 1]
+
+    if (haveM) {
+        Msub  = M[useQML, .]
+        Sigma = Msub * Sigma_full * Msub'
+    }
+    else {
+        Sigma = Sigma_full[useQML, useQML]
+    }
+    eps   = mean(rsub:^2) * 1e-2
+    Sigma = Sigma + I(rows(Sigma)) * eps
+    pen = 0
+    if (abs(w[1]) > 20) pen = pen + (abs(w[1]) - 20)^2
+    if (abs(w[2]) > 10) pen = pen + (abs(w[2]) - 10)^2
+    real matrix R
+    R      = cholesky(Sigma)
+    rsub   = lusolve(R', rsub)
+    rsub   = lusolve(R , rsub)
+    Q      = 0.5*logdet(Sigma) + 0.5*quadcolsum(resid[useQML,1] :* rsub) + pen
+
+    if (args() >= 8) {
+        real matrix dS1_full, dS2_full, dK_drho
+        dS1_full = Sigma_full
+        dK_drho  = (dis_mat:/rho) :* Kfull
+        dS2_full = s2 :* dK_drho
+        real matrix dS1, dS2
+        if (haveM) {
+            dS1 = Msub * dS1_full * Msub'
+            dS2 = Msub * dS2_full * Msub'
+        }
+        else {
+            dS1 = dS1_full[useQML, useQML]
+            dS2 = dS2_full[useQML, useQML]
+        }
+        real matrix invS_d1, invS_d2
+        invS_d1 = lusolve(R , lusolve(R', dS1))
+        invS_d2 = lusolve(R , lusolve(R', dS2))
+        g1 = 0.5*(trace(invS_d1) - quadcolsum(rsub :* (invS_d1 * rsub)))
+        g2 = 0.5*(trace(invS_d2) - quadcolsum(rsub :* (invS_d2 * rsub)))
+        if (abs(w[1]) > 20) g1 = g1 + 2*sign(w[1])*(abs(w[1]) - 20)
+        if (abs(w[2]) > 10) g2 = g2 + 2*sign(w[2])*(abs(w[2]) - 10)
+        grad = (g1, g2)
+    }
+}
+
+function Sigma_func_DGP_bin(w, dis_mat)
+{
+    return( exp(w[1]) :* exp(-dis_mat/exp(w[2])) )
+}
+
+void FamaMacbethCRS(D, X, Y, Z, index, btemp){
+    X_mat = D, X
+    Z_mat = Z, X
+    k = cols(X_mat)
+    G = rows(uniqrows(index))
+    btemp = J(G, 1, 0)
+    for (ii = 1; ii <= G; ii++){
+        fii = index :== ii 
+        temp = select(Z_mat, fii)' * select(X_mat, fii)
+        ktemp = select(Z_mat, fii)' * select(Y, fii)
+        btemp[ii, 1] = (invsym(temp) * ktemp)[1,1]
+    }
+}
+
+real scalar sd_total(matrix X) {
+    n = rows(X) * cols(X)
+    return(sqrt(variance(colshape(X, 1), 1)))  //
+}
+
+function cluster_se(x, e, XpXinv, group, |k){
+    n = rows(e)
+    if (args() < 5){
+        k = rows(XpXinv)
+    }
+    k = rows(XpXinv)
+    V = J(k, k, 0)
+    for(ii = 1; ii <= max(group); ii++){
+        I = group :!= ii
+        V = V + (select(x, I)' * select(e, I)) * (select(x, I)' * select(e, I))'
+    }
+    vcluster = ((n-1)/(n-k)) * (max(group)/(max(group)-1)) * XpXinv * V * XpXinv'
+    se = sqrt(diagonal(vcluster))
+    return(se)
+}
+
+real scalar issquare(real matrix A)
+{
+    return(rows(A)==cols(A) & rows(A)>0)
+}
+
+real scalar isscalar(real matrix X)
+{
+    return(rows(X)==1 & cols(X)==1)
 }
 end
