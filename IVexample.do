@@ -97,3 +97,8 @@ crsivreg_test Y X_k ///
        , iv(X_e = Z_i) ///
        cluster(coord1 coord2) ///
        timeperiod(time_period)
+
+cceivreg Y X_k ///
+       , iv(X_e = Z_i) ///
+       cluster(coord1 coord2) ///
+       timeperiod(time_period)
