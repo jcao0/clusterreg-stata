@@ -88,17 +88,13 @@ end
 gen X_e = 0.5 + 1.2*Z_i + 0.8*X_k + V_error
 gen Y   = 1.0 + 2.0*X_e - 0.5*X_k + U_error
 
-imivreg_test Y X_k ///
-       , iv(X_e = Z_i) ///
-       cluster(coord1 coord2) ///
-       timeperiod(time_period)
+clusterivreg_test Y X_k (X_e = Z_i), coord(coord1 coord2) time(time_period)
+clusterivreg_test Y X_k (X_e = Z_i), coord(coord1 coord2) time(time_period) type("CRS")
 
-crsivreg_test Y X_k ///
-       , iv(X_e = Z_i) ///
-       cluster(coord1 coord2) ///
-       timeperiod(time_period)
 
-cceivreg Y X_k ///
-       , iv(X_e = Z_i) ///
-       cluster(coord1 coord2) ///
-       timeperiod(time_period)
+
+clear all
+set more off
+
+import delimited ElectionViolenceTABLE2.csv
+clusterivreg_test total_v2_agcho10 population_2010_adj first (df_5to11=plus_wind_00z_10), coord(_cx _cy) time(first)
