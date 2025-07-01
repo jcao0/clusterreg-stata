@@ -1,18 +1,18 @@
-*=========================================================================*
-*  Simulated panel data for learned-cluster IV — SAR error specification  *
-*=========================================================================*
+*========================================*
+*  Example 1: Single Exogenous Variable  *
+*========================================*
 clear all
 set more off
 set seed 12345
 
 *----------------------------Parameters-----------------------------------*
-local N_cs     100          // 
-local T_time   3            // timeperiod
-local rho_sar  0.30         // SAR parameter ρ  (|ρ| < 1/λ_max(W))
-local d_cut    1.5          //
-local rho_uv   0.60         // corr(U , V)  ⇒ endog
-local sigma_u  1            //
-local sigma_v  1            //
+local N_cs     100
+local T_time   3
+local rho_sar  0.30
+local d_cut    1.5
+local rho_uv   0.60
+local sigma_u  1
+local sigma_v  1
 *-------------------------------------------------------------------------*
 
 local total_obs = `N_cs'*`T_time'
@@ -88,13 +88,64 @@ end
 gen X_e = 0.5 + 1.2*Z_i + 0.8*X_k + V_error
 gen Y   = 1.0 + 2.0*X_e - 0.5*X_k + U_error
 
-clusterivreg_test Y X_k (X_e = Z_i), coord(coord1 coord2) time(time_period)
-clusterivreg_test Y X_k (X_e = Z_i), coord(coord1 coord2) time(time_period) type("CRS")
+clusterivreg Y X_k (X_e = Z_i), cluster(coord1 coord2) time(time_period) type("CRS")
 
 
 
+*===========================================*
+*  Example 2: Multiple Exogenous Variables  *
+*===========================================*
 clear all
 set more off
+set seed 12345
 
-import delimited ElectionViolenceTABLE2.csv
-clusterivreg_test total_v2_agcho10 population_2010_adj first (df_5to11=plus_wind_00z_10), coord(_cx _cy) time(first)
+*----------------------------Parameters-----------------------------------*
+local N_cluster   5
+local N_per_clust 50
+local sigma_u     1.2
+local sigma_v     1
+local rho_uv      0.65
+*-------------------------------------------------------------------------*
+
+set obs `=`N_cluster'*`N_per_clust''
+gen long id_cs      = _n
+gen byte time_period = 2 
+
+matrix C = ( 0,0 \ 10,0 \ 0,10 \ 10,10 \ 5,5 )
+
+gen double coord1 = .
+gen double coord2 = .
+forvalues g = 1/`N_cluster' {
+    local start = (`g'-1)*`N_per_clust' + 1
+    local end   = `g'*`N_per_clust'
+    replace coord1 = C[`g',1] + runiform(-1.8,1.8) in `start'/`end'
+    replace coord2 = C[`g',2] + runiform(-1.8,1.8) in `start'/`end'
+}
+
+egen true_cluster = group(coord1 coord2), label
+
+gen w1 = rnormal(0,1)
+gen w2 = rnormal(0,1)
+
+gen z1 = rnormal(0,1)
+gen z2 = rnormal(0,1)
+
+tempvar u_raw v1_raw v2_raw
+gen `u_raw'  = rnormal(0,`sigma_u')
+gen `v1_raw' = rnormal(0,`sigma_v')
+gen `v2_raw' = rnormal(0,`sigma_v')
+
+egen u_cluster_eff  = mean(`u_raw' ), by(true_cluster)
+egen v1_cluster_eff = mean(`v1_raw'), by(true_cluster)
+egen v2_cluster_eff = mean(`v2_raw'), by(true_cluster)
+
+gen u  = sqrt(1-`rho_uv'^2)*`u_raw' + `rho_uv'*v1_cluster_eff
+gen v1 = v1_cluster_eff
+gen v2 = v2_cluster_eff
+
+gen x1 =  1   + 1.5*z1 + 0.5*z2 + 0.8*w1 + v1
+gen x2 = -0.5 + 0.7*z1 + 1.2*z2 + 0.4*w2 + v2
+gen y = 2.0*x1 - 1.5*x2 + 1.0*w1 + 0.5*w2 + u
+
+
+clusterivreg y w1 w2 (x1 x2 = z1 z2), cluster(coord1 coord2)
