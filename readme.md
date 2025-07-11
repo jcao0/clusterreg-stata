@@ -5,7 +5,7 @@ Version: July2025
 
 Authors: Jianfei Cao, Chris Hansen, Damian Kozbur, Lucciano Villacorta, Romano Li, Jiacheng Liang
 
-Correspondence: Jianfei Cao
+Correspondence: Jianfei Cao, Northeastern University
 
 Associated Paper: Cao, J., Hansen, C., Kozbur, D., & Villacorta, L. (2024). Inference for dependent data with learned clusters. Review of Economics and Statistics, 1-45.
 
@@ -56,11 +56,11 @@ The package also relies heavily on embedded Mata functions for calculations. Ens
 --------------------------------------------------------------------------------
 **Syntax**
 
-`clusterreg` (for OLS Models)
+`clusterreg` (for OLS)
 
     clusterreg depvar indepvars [if] [in] [weight], cluster(varlist) [time(varname) type(string)]
 
-`clusterivreg` (for IV Models)
+`clusterivreg` (for IV)
 
 
 
@@ -82,7 +82,7 @@ The IV syntax is standard, with endogenous variables and instruments specified w
 
 Regardless of the command or type, the procedure follows these steps:
 
-1. Clustering: A set of potential data partitions is created using the k-medoids algorithm on the variables specified in `cluster()`. The number of clusters, `G`, is varied from 2 up to a maximum of $$ceil(n^{1/3})$$.
+1. Clustering: A set of potential data partitions is created using the k-medoids algorithm on the variables specified in `cluster()`. The number of clusters, `G`, is varied from 2 up to a maximum of $\lceil n^{1/3}\rceil$.
 
 2. Covariance Estimation: The procedure estimates the parameters of a spatial/spatio-temporal covariance function. This is done via Quasi-Maximum Likelihood Estimation on the residuals from the initial full-sample OLS or 2SLS estimation.
 
