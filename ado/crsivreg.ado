@@ -4,7 +4,7 @@ program define crsivreg, eclass
     version 17
     // 1. Syntax Parsing for Multiple IVs (identical to imivreg)
     syntax varlist(numeric min=1) [if] [in] [aw fw iw pw], ///
-        CLuster(varlist numeric) [TIMEperiod(varname numeric)] ///
+        coord(varlist numeric) [TIMEperiod(varname numeric)] ///
         IV(string asis)
 
     // Parse the main varlist to get depvar and exog_vars
@@ -73,7 +73,7 @@ program define crsivreg, eclass
 				Z_i = J(rows(Y_s), 0, .) 
 				}
         
-        coord       = st_data(.,"`cluster'")
+        coord       = st_data(.,"`coord'")
         timePeriod  = st_data(.,"`timeperiod'")
         n           = length(Y_s)
         X_s_all     = (X_e, X_k, J(n,1,1))
@@ -92,7 +92,7 @@ program define crsivreg, eclass
 
     // --- 2. Cluster Generation (identical to imivreg) ---
     gen id0 = _n 
-    matrix dissim dis_mat = `cluster',L2 
+    matrix dissim dis_mat = `coord',L2 
     matrix dissim time_mat = `timeperiod', L2
     forvalues i =2/`=G_max' { 
         qui clpam group`i', distmat(dis_mat) id(id0) medoids(`i') ga

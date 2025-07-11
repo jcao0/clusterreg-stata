@@ -4,7 +4,7 @@
 program define clusterivreg, eclass
     version 17
     syntax anything [if] [in] [aweight fweight iw pw], ///
-           CLuster(varlist) [TIME(varname) TYPE(string)]
+           coord(varlist) [TIME(varname) TYPE(string)]
 
     local allargs `anything'
     
@@ -23,14 +23,14 @@ program define clusterivreg, eclass
     if ("`type'" == "CCE" | "`type'" == "cce") {
         di as text "--> Calling CCE-IV method with learned clusters"
         // Call the finalized cceivreg program
-        cceivreg `main_vars' `if' `in' `weight', iv(`iv_spec') cluster(`cluster') timeperiod(`time')
+        cceivreg `main_vars' `if' `in' `weight', iv(`iv_spec') coord(`coord') timeperiod(`time')
     }
     
     // --- CRS-IV ---
     else if ("`type'" == "CRS" | "`type'" == "crs") {
         di as text "--> Calling CRS-IV method with learned clusters"
         // Call the finalized crsivreg program
-        crsivreg `main_vars' `if' `in' `weight', iv(`iv_spec') cluster(`cluster') timeperiod(`time')
+        crsivreg `main_vars' `if' `in' `weight', iv(`iv_spec') coord(`coord') timeperiod(`time')
     }
     
     // --- IM-IV (Default) ---
@@ -38,7 +38,7 @@ program define clusterivreg, eclass
         if ("`type'"=="" | "`type'"=="IM" | "`type'"=="im") {
             di as text "--> Calling IM-IV method with learned clusters (default)"
             // Call the finalized imivreg program
-            imivreg `main_vars' `if' `in' `weight', iv(`iv_spec') cluster(`cluster') timeperiod(`time')
+            imivreg `main_vars' `if' `in' `weight', iv(`iv_spec') coord(`coord') timeperiod(`time')
         }
         else {
             di as error "type(`type') not recognized. Available types are IM, CRS, CCE."

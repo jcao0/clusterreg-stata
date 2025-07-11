@@ -25,7 +25,7 @@ where {it:endog_vars} are the endogenous regressors and {it:inst_vars} are the e
 {synopthdr}
 {synoptline}
 {syntab:Required}
-{synopt :{opt cluster(varlist)}}Specifies the numeric variables representing the coordinates or features used for calculating distances and forming clusters (e.g., latitude, longitude). At least one variable must be provided.{p_end}
+{synopt :{opt coord(varlist)}}Specifies the numeric variables representing the coordinates or features used for calculating distances and forming clusters (e.g., latitude, longitude). At least one variable must be provided.{p_end}
 
 {syntab:Optional}
 {synopt :{opt time(varname)}}Specifies a numeric variable indicating the time period for each observation. If provided, the estimation of the error covariance structure can incorporate temporal decay alongside spatial/feature decay.{p_end}
@@ -61,7 +61,7 @@ where {it:endog_vars} are the endogenous regressors and {it:inst_vars} are the e
 
 {pstd}
 The procedure's validity relies on conditions including:{p_end}
-{pmore}1. {bf:Metric Space Properties}: Assumptions on the space defined by {opt cluster()} variables (e.g., Ahlfors regularity).{p_end}
+{pmore}1. {bf:Metric Space Properties}: Assumptions on the space defined by {opt coord()} variables (e.g., Ahlfors regularity).{p_end}
 {pmore}2. {bf:Mixing Condition}: Dependence between observations decays sufficiently fast with distance (in coordinate/time space).{p_end}
 {pmore}3. {bf:IV Validity}: Standard instrument relevance and exogeneity conditions must hold.{p_end}
 
@@ -73,13 +73,13 @@ Key theoretical results allow for valid Type I error control under the specified
 {title:Examples}
 
 {pstd}A simple IV model with one endogenous and one instrument variable:{p_end}
-{phang2}{cmd:. clusterivreg wage tenure (educ = father_educ), cluster(lat lon)}{p_end}
+{phang2}{cmd:. clusterivreg wage tenure (educ = father_educ), coord(lat lon)}{p_end}
 
 {pstd}A model with exogenous controls and spatio-temporal dependence, using the CRS method:{p_end}
-{phang2}{cmd:. clusterivreg log_price sqft (crime_rate = police_funding), cluster(x_coord y_coord) time(quarter) type(CRS)}{p_end}
+{phang2}{cmd:. clusterivreg log_price sqft (crime_rate = police_funding), coord(x_coord y_coord) time(quarter) type(CRS)}{p_end}
 
 {pstd}A model with multiple endogenous variables and multiple instruments:{p_end}
-{phang2}{cmd:. clusterivreg growth gdp (invest trade = tariff infrastructure), cluster(region_x region_y) type(CCE)}{p_end}
+{phang2}{cmd:. clusterivreg growth gdp (invest trade = tariff infrastructure), coord(region_x region_y) type(CCE)}{p_end}
 
 {pstd}For a full demonstration, please see the provided {bf:IVexample.do} file.{p_end}
 
@@ -103,7 +103,7 @@ Key theoretical results allow for valid Type I error control under the specified
 {synopt:{cmd:e(exog_vars)}}Names of exogenous regressors{p_end}
 {synopt:{cmd:e(endog_vars)}}Names of endogenous regressors{p_end}
 {synopt:{cmd:e(inst_vars)}}Names of instrumental variables{p_end}
-{synopt:{cmd:e(cluster)}}Name(s) of coordinate variables{p_end}
+{synopt:{cmd:e(coord)}}Name(s) of coordinate variables{p_end}
 {synopt:{cmd:e(timevar)}}Name of time variable (if specified){p_end}
 {synopt:{cmd:e(method)}}Inference method used (IM, CRS, or CCE){p_end}
 {synopt:{cmd:e(predict)}}Program used for predict{p_end}

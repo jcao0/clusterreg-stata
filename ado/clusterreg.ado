@@ -8,28 +8,28 @@ program define clusterreg
     if "`type'"=="CCE"{
         capture program drop cce
         if "`time'" != "" {
-            ccereg `anything' `if' `in' `weight', cluster(`coord') timeperiod(`time')
+            ccereg `anything' `if' `in' `weight', coord(`coord') timeperiod(`time')
         }
         else {
-            ccereg `anything' `if' `in' `weight', cluster(`coord')
+            ccereg `anything' `if' `in' `weight', coord(`coord')
         }
     }
     else if "`type'"=="CRS"{
         capture program drop crs
         if "`time'" != "" {
-            crsreg `anything' `if' `in' `weight', cluster(`coord') timeperiod(`time')
+            crsreg `anything' `if' `in' `weight', coord(`coord') timeperiod(`time')
         }
         else {
-            crsreg `anything' `if' `in' `weight', cluster(`coord')
+            crsreg `anything' `if' `in' `weight', coord(`coord')
         }
     }
     else{
         capture program drop im
         if "`time'" != "" {
-            imreg `anything' `if' `in' `weight', cluster(`coord') timeperiod(`time')
+            imreg `anything' `if' `in' `weight', coord(`coord') timeperiod(`time')
         }
         else {
-            imreg `anything' `if' `in' `weight', cluster(`coord')
+            imreg `anything' `if' `in' `weight', coord(`coord')
         }
     }
     

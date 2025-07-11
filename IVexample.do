@@ -88,7 +88,7 @@ end
 gen X_e = 0.5 + 1.2*Z_i + 0.8*X_k + V_error
 gen Y   = 1.0 + 2.0*X_e - 0.5*X_k + U_error
 
-clusterivreg Y X_k (X_e = Z_i), cluster(coord1 coord2) time(time_period) type("CRS")
+clusterivreg Y X_k (X_e = Z_i), coord(coord1 coord2) time(time_period) type("CRS")
 
 
 
@@ -148,4 +148,4 @@ gen x2 = -0.5 + 0.7*z1 + 1.2*z2 + 0.4*w2 + v2
 gen y = 2.0*x1 - 1.5*x2 + 1.0*w1 + 0.5*w2 + u
 
 
-clusterivreg y w1 w2 (x1 x2 = z1 z2), cluster(coord1 coord2)
+clusterivreg y w1 w2 (x1 x2 = z1 z2), coord(coord1 coord2)

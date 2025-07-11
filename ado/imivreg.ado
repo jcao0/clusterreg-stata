@@ -5,7 +5,7 @@ program define imivreg, eclass
     // 1. Syntax Parsing for Multiple IVs
     // Example: imivreg depvar exog1 exog2 (endog1 endog2 = inst1 inst2 inst3), ...
     syntax varlist(numeric min=1) [if] [in] [aw fw iw pw], ///
-        CLuster(varlist numeric) [TIMEperiod(varname numeric)] ///
+        coord(varlist numeric) [TIMEperiod(varname numeric)] ///
         IV(string asis)
 
     // Parse the main varlist to get depvar and exog_vars
@@ -75,7 +75,7 @@ program define imivreg, eclass
             Z_i     = J(rows(Y_s), 0, .)
         }
         
-        coord       = st_data(.,"`cluster'")
+        coord       = st_data(.,"`coord'")
         timePeriod  = st_data(.,"`timeperiod'")
         n           = length(Y_s)
 
@@ -100,7 +100,7 @@ program define imivreg, eclass
 
     // --- 2. Cluster Generation ---
     gen id0 = _n 
-    matrix dissim dis_mat = `cluster',L2 
+    matrix dissim dis_mat = `coord',L2 
     matrix dissim time_mat = `timeperiod', L2
     forvalues i =2/`=G_max' { 
         qui clpam group`i', distmat(dis_mat) id(id0) medoids(`i') ga

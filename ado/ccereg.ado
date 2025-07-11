@@ -1,5 +1,5 @@
 program define ccereg, eclass
-    syntax varlist(min=2) [if] [in], cluster(varlist) [timeperiod(varname)]
+    syntax varlist(min=2) [if] [in], coord(varlist) [timeperiod(varname)]
 
     tempname __htscalar
     if "`timeperiod'" == "" {
@@ -26,7 +26,7 @@ program define ccereg, eclass
         X         = st_data(., tokens("`xvars'"))
         X         = X, J(rows(X), 1, 1)
         n         = length(Y)
-        coord     = st_data(., "`cluster'")
+        coord     = st_data(., "`coord'")
         timePeriod= st_data(., "`timeperiod'")
         p         = cols(X)
 
@@ -39,7 +39,7 @@ program define ccereg, eclass
     }
 
     gen id0 = _n
-    matrix dissim dis_mat  = `cluster', L2
+    matrix dissim dis_mat  = `coord', L2
     matrix dissim time_mat = `timeperiod', L2
     forvalues i = 2/`=G_max' {
         quietly clpam group`i', distmat(dis_mat) id(id0) medoids(`i') ga

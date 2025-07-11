@@ -1,5 +1,5 @@
 program define imreg, eclass
-    syntax varlist(min=2) [if] [in], cluster(varlist) [timeperiod(varname)]
+    syntax varlist(min=2) [if] [in], coord(varlist) [timeperiod(varname)]
     tokenize `varlist'
 
 tempname __htscalar                // 
@@ -25,7 +25,7 @@ else {
         X = st_data(., tokens("`xvars'"))
         X = X, J(rows(X), 1, 1)
         n = length(Y)
-        coord = st_data(.,"`cluster'")
+        coord = st_data(.,"`coord'")
         timePeriod = st_data(.,"`timeperiod'")
         p = cols(X)
         G_max = ceil(n^(1/3))
@@ -36,7 +36,7 @@ else {
     }
 
     gen id0 = _n 
-    matrix dissim dis_mat = `cluster',L2 
+    matrix dissim dis_mat = `coord',L2 
     matrix dissim time_mat = `timeperiod', L2
     forvalues i =2/`=G_max' { 
         qui clpam group`i', distmat(dis_mat) id(id0) medoids(`i') ga
