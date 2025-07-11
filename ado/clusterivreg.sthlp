@@ -11,7 +11,7 @@
 {title:Syntax}
 
 {p 8 15 2}
-{cmd:clusterivreg} {depvar} [{it:exog_vars}] ({it:endog_vars} {cmd:=} {it:inst_vars}) {ifin} {it:{weight}} {cmd:,} {opt cl:uster(varlist)} [{opt time(varname)}] [{opt type(string)}]
+{cmd:clusterivreg} {depvar} [{it:exog_vars}] ({it:endog_vars} {cmd:=} {it:inst_vars}) {ifin} {it:{weight}} {cmd:,} {opt coord(varlist)} [{opt time(varname)}] [{opt type(string)}]
 {p_end}
 
 {pstd}
